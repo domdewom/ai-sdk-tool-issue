@@ -34,7 +34,7 @@ export default async function handler(req: Request) {
     const result = await streamText({
       model: openai('gpt-4o-mini'),
       messages,
-      system: 'You are a helpful podcast assistant. Keep responses concise and friendly.',
+      system: 'You are a helpful assistant. Keep responses concise and friendly.',
     });
 
     console.log('Returning text stream response');
