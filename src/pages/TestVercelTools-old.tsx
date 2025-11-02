@@ -6,6 +6,9 @@ export default function TestVercelTools() {
     onError: (error) => {
       console.error('Chat error:', error);
     },
+    onResponse: (response) => {
+      console.log('Response received:', response.status, response.statusText);
+    },
     onFinish: (message) => {
       console.log('Message finished:', message);
     },
@@ -34,9 +37,24 @@ export default function TestVercelTools() {
             <strong style={{ color: m.role === 'user' ? '#0066cc' : '#009900' }}>
               {m.role}:
             </strong>
-            <div style={{ marginTop: '5px', whiteSpace: 'pre-wrap' }}>
-              {m.content}
-            </div>
+            <div style={{ marginTop: '5px', whiteSpace: 'pre-wrap' }}>{m.content}</div>
+            
+            {/* Show tool calls if present */}
+            {m.toolInvocations && m.toolInvocations.length > 0 && (
+              <div style={{ marginTop: '10px', padding: '10px', background: '#f0f0f0', borderRadius: '4px', fontSize: '12px' }}>
+                <strong>🔧 Tools used:</strong>
+                {m.toolInvocations.map((tool, idx) => (
+                  <div key={idx} style={{ marginTop: '5px' }}>
+                    • {tool.toolName}
+                    {tool.state === 'result' && tool.result && (
+                      <pre style={{ marginLeft: '10px', fontSize: '11px', overflow: 'auto' }}>
+                        {JSON.stringify(tool.result, null, 2)}
+                      </pre>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         ))}
         {isLoading && <div style={{ color: '#999', fontStyle: 'italic' }}>Assistant is thinking…</div>}
