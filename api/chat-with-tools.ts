@@ -1,4 +1,4 @@
-import { streamText, stepCountIs } from 'ai';
+import { streamText, stepCountIs, convertToModelMessages, type UIMessage } from 'ai';
 import { openai } from '@ai-sdk/openai';
 import { z } from 'zod';
 
@@ -6,32 +6,17 @@ export const config = {
   runtime: 'edge',
 };
 
-export default async function handler(req: Request) {
+export async function POST(req: Request) {
   console.log('=== Vercel API with Tools Called ===');
 
-  if (req.method === 'OPTIONS') {
-    return new Response(null, {
-      status: 200,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-      },
-    });
-  }
-
-  if (req.method !== 'POST') {
-    return new Response('Method not allowed', { status: 405 });
-  }
-
   try {
-    const body = await req.json();
-    const { messages } = body as { messages: any[] };
+    const body: any = await req.json();
+    const messages: UIMessage[] = body.messages || [];
     console.log('Messages received:', messages?.length);
 
     const result = streamText({
       model: openai('gpt-4o-mini'),
-      messages,
+      messages: convertToModelMessages(messages),
       system: 'You are a helpful assistant.',
       stopWhen: stepCountIs(5),
       onStepFinish: (step) => {
@@ -57,13 +42,31 @@ export default async function handler(req: Request) {
             };
           },
         },
+        getCityFact: {
+          description: 'Get a fun fact about a city.',
+          inputSchema: z.object({
+            city: z.string().describe('The name of the city.'),
+          }),
+          execute: async ({ city }) => {
+            console.log(`Tool called: getCityFact for ${city}`);
+            let fact = 'I do not have a fact for this city.';
+            if (city.toLowerCase() === 'paris') {
+              fact = 'Paris is known as the "City of Light".';
+            } else if (city.toLowerCase() === 'tokyo') {
+              fact = 'Tokyo is the most populous metropolitan area in the world.';
+            } else if (city.toLowerCase() === 'new york') {
+              fact = 'New York City is home to the Statue of Liberty.';
+            }
+            return { fact };
+          },
+        },
       },
     });
 
     console.log('Returning stream');
-    result.text.then(t => console.log('Full text:', t));
 
-    // According to docs: for useChat with tools, use toUIMessageStreamResponse
+    // Revert back to the correct response format for tool calling.
+    // Now that the frontend issues are fixed, this should be parsed correctly.
     return result.toUIMessageStreamResponse({
       headers: { 'Access-Control-Allow-Origin': '*' },
     });
